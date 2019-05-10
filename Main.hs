@@ -5,11 +5,18 @@ module Main where
 import Control.Lens
 import Control.Monad
 import Data.Maybe
+import Data.Semigroup ((<>))
 import Data.Text
 import qualified Data.Text.IO as TextIO
 import Network.AWS
 import Network.AWS.SQS
+import Options.Applicative
 import System.IO
+
+data Configuration = Configuration
+  { fromURL :: Text
+  , toURL :: Text
+  }
 
 receiveTenMessages :: Env -> Text -> IO [Message]
 receiveTenMessages env url = do
@@ -53,8 +60,26 @@ shovelAll fromURL toURL = do
   processedMessages <- shovelNextTen env fromURL toURL
   when processedMessages $ shovelAll fromURL toURL
 
+configurationParser :: Parser Configuration
+configurationParser =
+  Configuration <$>
+  Options.Applicative.argument
+    str
+    (metavar "FROM_URL" <> help "Url of queue to get messages from") <*>
+  Options.Applicative.argument
+    str
+    (metavar "TO_URL" <> help "Url of queue to put messages to")
+
+parseCommandLine :: IO Configuration
+parseCommandLine =
+  execParser $
+  info
+    (configurationParser <**> helper)
+    (fullDesc <> progDesc "Move messages from one queue to other" <>
+     header "shovel.hs - SQS messages shovel")
+
 main :: IO ()
 main = do
-  env <- newEnv Discover
-  shovelAll "queue1" "queue2"
+  configuration <- parseCommandLine
+  shovelAll (fromURL configuration) (toURL configuration)
   putStrLn "No more messages to shovel"
