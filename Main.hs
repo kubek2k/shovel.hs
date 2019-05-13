@@ -54,11 +54,10 @@ shovelNextTen env fromURL toURL = do
     forM (message ^. mReceiptHandle) $ \handle -> delMessage env fromURL handle
   return $ Prelude.length messages > 0
 
-shovelAll :: Text -> Text -> IO ()
-shovelAll fromURL toURL = do
-  env <- newEnv Discover
+shovelAll :: Env -> Text -> Text -> IO ()
+shovelAll env fromURL toURL = do
   processedMessages <- shovelNextTen env fromURL toURL
-  when processedMessages $ shovelAll fromURL toURL
+  when processedMessages $ shovelAll env fromURL toURL
 
 configurationParser :: Parser Configuration
 configurationParser =
@@ -81,5 +80,6 @@ parseCommandLine =
 main :: IO ()
 main = do
   configuration <- parseCommandLine
-  shovelAll (fromURL configuration) (toURL configuration)
+  env <- newEnv Discover
+  shovelAll env (fromURL configuration) (toURL configuration)
   putStrLn "No more messages to shovel"
