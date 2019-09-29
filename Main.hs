@@ -12,6 +12,7 @@ import Network.AWS
 import Network.AWS.SQS
 import Options.Applicative
 import System.IO
+import Text.Regex
 
 data Configuration = Configuration
   { fromURL :: Text
@@ -68,6 +69,15 @@ configurationParser =
   Options.Applicative.argument
     str
     (metavar "TO_URL" <> help "Url of queue to put messages to")
+
+sqsURLRegex = mkRegex "https://sqs.[^.]+.amazonaws.com/[0-9]+/[^/]+$"
+
+readSQSURL :: String -> Either String String
+readSQSURL s =
+  case matchRegex sqsURLRegex of
+    Nothing ->
+      Left $ "Url " <> s <> " doesn't match regex " <> print sqsURLRegex
+    Just u -> Right u
 
 parseCommandLine :: IO Configuration
 parseCommandLine =
